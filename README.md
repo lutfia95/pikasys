@@ -10,6 +10,20 @@ The application consists of `pikasys.c` and a `Makefile`. This README documents 
 
 > **Development release:** Linux compilation and terminal behavior have been tested. NVIDIA integration has been tested with a simulated driver. Real NVIDIA, AMD, and Intel hardware, WSL, and macOS builds still need validation. Available metrics depend on the operating system, driver, hardware, and permissions; unavailable values appear as `N/A` or JSON `null`.
 
+## Screenshots
+
+### Overview
+
+![pikasys overview showing CPU, memory, GPU, and process information](imgs/pic1.png)
+
+### Logical CPU view
+
+![pikasys logical CPU usage and memory history](imgs/pic2.png)
+
+### GPU view
+
+![pikasys NVIDIA GPU utilization history](imgs/pic3.png)
+
 ## Features
 
 - Overall and per-core CPU usage, load averages, and available CPU sensor readings.
