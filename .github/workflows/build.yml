@@ -22,7 +22,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build with strict warnings
-        run: make CC="${{ matrix.compiler }}" CFLAGS="-O2 -g -Werror"
+        run: |
+          make clean
+          make CC="${{ matrix.compiler }}" CFLAGS="-O2 -g -Werror"
 
       - name: Run regression and JSON smoke tests
         run: make check
