@@ -562,15 +562,18 @@ static void drm_discover(Monitor *m) {
         if(g->clock<0)g->clock=gpu_file(g,"device/tile0/gt0/freq0/cur_freq");
         g->shared=vendor==0x8086 && g->mem_total<=0;
         char pattern[PATH_MAX];snprintf(pattern,sizeof pattern,"%s/device/hwmon/hwmon*",g->path);glob_t gl={0};
-        if(!glob(pattern,0,NULL,&gl))for(size_t j=0;j<gl.gl_pathc;j++) {
-            const char *suffix[]={"temp1_input","power1_average","power1_input","power1_cap","fan1_input","freq1_input","freq2_input"};
-            double *targets[]={&g->temp,&g->watts,&g->watts,&g->limit,&g->rpm,&g->clock,&g->mem_clock};
-            double factors[]={1000,1e6,1e6,1e6,1,1e6,1e6};
-            for(size_t k=0;k<ARRAY_LEN(suffix);k++) {
-                snprintf(path,sizeof path,"%s/%s",gl.gl_pathv[j],suffix[k]);double v=read_number(path);
-                if(v>=0 && *targets[k]<0)*targets[k]=v/factors[k];
+        if(!glob(pattern,0,NULL,&gl)) {
+            for(size_t j=0;j<gl.gl_pathc;j++) {
+                const char *suffix[]={"temp1_input","power1_average","power1_input","power1_cap","fan1_input","freq1_input","freq2_input"};
+                double *targets[]={&g->temp,&g->watts,&g->watts,&g->limit,&g->rpm,&g->clock,&g->mem_clock};
+                double factors[]={1000,1e6,1e6,1e6,1,1e6,1e6};
+                for(size_t k=0;k<ARRAY_LEN(suffix);k++) {
+                    snprintf(path,sizeof path,"%s/%s",gl.gl_pathv[j],suffix[k]);double v=read_number(path);
+                    if(v>=0 && *targets[k]<0)*targets[k]=v/factors[k];
+                }
             }
-        }globfree(&gl);
+        }
+        globfree(&gl);
     }closedir(dir);
 }
 
@@ -857,6 +860,8 @@ static void text_at(int x,int y,int fg,int bg,const char *s) {
     while(*s && x<width) {unsigned char c=(unsigned char)*s++;if(c>=128){while((*s&0xc0)==0x80)s++;c='?';}
         cell(x++,y,c<32 || c==127?' ':c,fg,bg);}
 }
+static void linef(int x,int y,int max,int fg,const char *fmt,...)
+    __attribute__((format(printf,5,6)));
 static void linef(int x,int y,int max,int fg,const char *fmt,...) {
     if(max<=0)return;
     char buf[2048];va_list ap;va_start(ap,fmt);vsnprintf(buf,sizeof buf,fmt,ap);va_end(ap);
@@ -1148,9 +1153,12 @@ static void load_config(void) {
 }
 static bool create_parents(const char *path) {
     char buf[PATH_MAX];copystr(buf,sizeof buf,path);
-    for(char *p=buf+1;*p;p++)if(*p=='/') {
-        *p=0;if(mkdir(buf,0700)!=0 && errno!=EEXIST)return false;*p='/';
-    }return true;
+    for(char *p=buf+1;*p;p++) {
+        if(*p=='/') {
+            *p=0;if(mkdir(buf,0700)!=0 && errno!=EEXIST)return false;*p='/';
+        }
+    }
+    return true;
 }
 static void save_config(void) {
     if(opt.no_config || !opt.config[0]){copystr(opt.notice,sizeof opt.notice,"Configuration saving disabled.");return;}
