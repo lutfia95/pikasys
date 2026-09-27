@@ -1,7 +1,4 @@
 /*
- * pikasys 0.1.0 -- CPU + GPU terminal monitor, a single C translation unit.
- * Copyright (c) 2026. Released under the MIT license (full text at EOF).
- *
  * BUILD: make; sudo make install; pikasys
  * Requires a C11 compiler, make, and the OS development headers. macOS:
  * xcode-select --install. Linux/WSL: your distribution's C build tools.
@@ -22,18 +19,6 @@
  * DRM process GPU % is the busiest normalized engine; shared DRM clients are
  * assigned to the first accessible PID to avoid double counting. It is not
  * a device-wide utilization estimate. Resident buffers can be shared by clients.
- *
- * --help contains controls/config documentation; --self-test runs built-in
- * parser/calculation regression tests; --json produces one JSON object/sample.
- * Implementation is read-only except explicit 'w' to save user preferences.
- *
- * VALIDATION FOR THIS RELEASE:
- * Linux GCC 13: warning-free build with -Werror; 40 built-in checks; live CPU
- * workload, JSON, PTY resize/keyboard/config, install/uninstall, signal cleanup.
- * NVML exercised using a simulated two-device driver, including unsupported
- * counters and duplicate process records. ASan/UBSan passed (LeakSanitizer was
- * unavailable in the build sandbox). Real NVIDIA/AMD/Intel hardware, WSL, and
- * macOS builds have NOT been validated. This is a first development release.
  *
  * Interface references:
  * https://docs.nvidia.com/deploy/nvml-api/
@@ -97,6 +82,8 @@
 #define MAX_CPU 8192
 #define HISTORY 240
 #define MAX_ENGINE 32
+/* All monitored values are non-negative, so -1 safely represents a reading
+ * that is unsupported, inaccessible, or not available until another sample. */
 #define NA (-1.0)
 #define ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -234,6 +221,8 @@ static uint32_t decode_utf8(const char **input) {
 static Process *add_process(Monitor *m) {
     if(m->nproc==m->cap) {m->cap=m->cap ? m->cap*2 : 512; m->procs=resize(m->procs,m->cap,sizeof(Process));}
     Process *p=&m->procs[m->nproc++]; memset(p,0,sizeof *p);
+    /* Rate and GPU fields need a previous sample or backend attribution.
+     * Unknown is different from a measured zero, so initialize them to NA. */
     p->cpu=p->gpu=p->gpu_mem=p->read_rate=p->write_rate=NA; return p;
 }
 static int pid_cmp(const void *a,const void *b) {
@@ -413,6 +402,9 @@ static void linux_disks(Monitor *m) {
     m->prev_read=reads;m->prev_write=writes;m->disk_valid=found;
 }
 static void linux_sensors(Monitor *m) {
+    /* hwmon and RAPL are optional kernel interfaces. In particular, WSL often
+     * does not forward these host sensors, so leave the fields as NA when the
+     * files are absent instead of reporting a misleading zero. */
     m->cpu_temp=m->cpu_power=NA;glob_t gl={0};
     if(!glob("/sys/class/hwmon/hwmon*/name",0,NULL,&gl)) {
         for(size_t i=0;i<gl.gl_pathc;i++) {
@@ -1417,27 +1409,3 @@ int main(int argc,char **argv) {
     }
     restore_terminal();monitor_free(&m);free(screen);free(previous);free(visible);return 0;
 }
-
-/*
-MIT License
-
-Copyright (c) 2026 pikasys contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/

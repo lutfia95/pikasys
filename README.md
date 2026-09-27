@@ -1,5 +1,7 @@
 # pikasys
 
+[![Build](https://github.com/lutfia95/pikasys/actions/workflows/build.yml/badge.svg)](https://github.com/lutfia95/pikasys/actions/workflows/build.yml)
+
 **Live CPU and GPU monitoring in one C source file.**
 
 pikasys combines system and process monitoring with GPU statistics in a keyboard-driven terminal interface. It targets Linux, Windows through WSL2, and macOS, with selectable themes, history graphs, and JSON export.
